@@ -46,8 +46,17 @@ app = FastAPI(
 
 class BacktestRequest(BaseModel):
     strategy: str = Field(default="sma_cross", description="Strategy name")
+    # SMA Cross params
     short_window: int = Field(default=20, ge=2)
     long_window: int = Field(default=50, ge=3)
+    # MACD params
+    fast: int | None = Field(default=None, ge=1)
+    slow: int | None = Field(default=None, ge=1)
+    signal: int | None = Field(default=None, ge=1)
+    # RSI params
+    window: int | None = Field(default=None, ge=1)
+    oversold: float | None = Field(default=None)
+    overbought: float | None = Field(default=None)
 
 
 class BacktestStarted(BaseModel):
@@ -58,8 +67,17 @@ class BacktestStarted(BaseModel):
 
 class CompareRequest(BaseModel):
     strategies: list[str] = Field(default=["sma_cross", "macd"])
+    # SMA Cross params
     short_window: int = Field(default=20, ge=2)
     long_window: int = Field(default=50, ge=3)
+    # MACD params
+    fast: int | None = Field(default=None, ge=1)
+    slow: int | None = Field(default=None, ge=1)
+    signal: int | None = Field(default=None, ge=1)
+    # RSI params
+    window: int | None = Field(default=None, ge=1)
+    oversold: float | None = Field(default=None)
+    overbought: float | None = Field(default=None)
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
@@ -88,6 +106,10 @@ async def start_backtest(req: BacktestRequest) -> BacktestStarted:
     kwargs: dict = {}
     if req.strategy == "sma_cross":
         kwargs = {"short_window": req.short_window, "long_window": req.long_window}
+    elif req.strategy == "macd":
+        kwargs = {k: v for k, v in {"fast": req.fast, "slow": req.slow, "signal": req.signal}.items() if v is not None}
+    elif req.strategy == "rsi":
+        kwargs = {k: v for k, v in {"window": req.window, "oversold": req.oversold, "overbought": req.overbought}.items() if v is not None}
 
     await push_job(run_id, req.strategy, kwargs)
 
@@ -121,7 +143,28 @@ async def compare(req: CompareRequest) -> dict:
             detail=f"Unknown strategies: {unknown}. Available: {available}",
         )
 
-    kwargs = {"short_window": req.short_window, "long_window": req.long_window}
-    result = await run_comparison(req.strategies, kwargs, "data/sample_data.csv")
-    result["multiple_testing_adjusted"] = False
-    return result
+    _SMA_KEYS = {"short_window", "long_window"}
+    _MACD_KEYS = {"fast", "slow", "signal"}
+    _RSI_KEYS = {"window", "oversold", "overbought"}
+    _STRATEGY_KEYS: dict[str, set] = {
+        "sma_cross": _SMA_KEYS,
+        "macd": _MACD_KEYS,
+        "rsi": _RSI_KEYS,
+    }
+
+    _optional = {
+        "fast": req.fast, "slow": req.slow, "signal": req.signal,
+        "window": req.window, "oversold": req.oversold, "overbought": req.overbought,
+    }
+    _all_kwargs: dict = {
+        "short_window": req.short_window,
+        "long_window": req.long_window,
+        **{k: v for k, v in _optional.items() if v is not None},
+    }
+
+    per_strategy_kwargs = {
+        strategy: {k: v for k, v in _all_kwargs.items() if k in _STRATEGY_KEYS.get(strategy, set())}
+        for strategy in req.strategies
+    }
+
+    return await run_comparison(req.strategies, per_strategy_kwargs, "data/sample_data.csv")

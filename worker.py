@@ -14,8 +14,12 @@ Run via Docker:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 
+import redis.asyncio as aioredis
+
+from config import settings
 from mq.redis_queue import pop_job
 from runner.backtest import run_backtest
 from storage.result_store import save_result
@@ -25,6 +29,42 @@ logging.basicConfig(
     format="%(asctime)s [worker] %(levelname)s %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+_redis_client: aioredis.Redis | None = None
+
+
+async def _get_redis_client() -> aioredis.Redis:
+    global _redis_client
+    if _redis_client is None:
+        _redis_client = aioredis.from_url(settings.REDIS_URL)
+    return _redis_client
+
+
+async def record_dead_letter(run_id: str, reason: str) -> None:
+    """Write failed job info to Redis key dead_letter:{run_id} for later inspection."""
+    client = await _get_redis_client()
+    await client.set(
+        f"dead_letter:{run_id}",
+        json.dumps({"run_id": run_id, "reason": reason}),
+    )
+    logger.warning("Dead-letter recorded for job %s: %s", run_id, reason)
+
+
+async def process_job(job: dict) -> None:
+    """Process a single backtest job from the queue."""
+    run_id = job["run_id"]
+    strategy = job["strategy"]
+    kwargs = job.get("kwargs", {})
+
+    logger.info("Processing job %s (strategy=%s)", run_id, strategy)
+    try:
+        result = await run_backtest(run_id, strategy, kwargs)
+        await save_result(run_id, result)
+        logger.info("Job %s completed", run_id)
+    except Exception as exc:
+        logger.error("Job %s failed: %s", run_id, exc)
+        await record_dead_letter(run_id, str(exc))
+        await save_result(run_id, {"run_id": run_id, "error": str(exc), "status": "failed"})
 
 
 async def main() -> None:
@@ -37,18 +77,7 @@ async def main() -> None:
             await asyncio.sleep(0.05)
             continue
 
-        run_id = job["run_id"]
-        strategy = job["strategy"]
-        kwargs = job.get("kwargs", {})
-
-        logger.info("Processing job %s (strategy=%s)", run_id, strategy)
-        try:
-            result = await run_backtest(run_id, strategy, kwargs)
-            await save_result(run_id, result)
-            logger.info("Job %s completed", run_id)
-        except Exception as exc:
-            logger.error("Job %s failed: %s", run_id, exc)
-            await save_result(run_id, {"run_id": run_id, "error": str(exc), "status": "failed"})
+        await process_job(job)
 
 
 if __name__ == "__main__":

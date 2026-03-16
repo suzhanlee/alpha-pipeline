@@ -20,9 +20,6 @@ from .progress import emit
 
 logger = logging.getLogger(__name__)
 
-_ticker_returns: list[pd.Series] = []
-
-
 async def run_backtest(
     run_id: str,
     strategy_name: str,
@@ -40,8 +37,8 @@ async def run_backtest(
     4. Aggregate into equal-weight portfolio returns
     5. Compute portfolio-level metrics
     """
-    global _ticker_returns
     strategy_kwargs = strategy_kwargs or {}
+    _ticker_returns: list[pd.Series] = []
 
     await emit(run_id, "loading_data", 5)
     loop = asyncio.get_event_loop()
@@ -69,12 +66,12 @@ async def run_backtest(
     await emit(run_id, "computing_metrics", 90)
 
     # Equal-weight portfolio: average daily return across tickers
-    portfolio = pd.concat(_ticker_returns, axis=1).fillna(0).mean(axis=1).dropna()
+    portfolio = pd.concat(_ticker_returns, axis=1).mean(axis=1).dropna()
     portfolio.name = "portfolio"
 
     metrics = compute_metrics(portfolio, risk_free_rate=settings.RISK_FREE_RATE_ANNUAL)
 
-    emit(run_id, "complete", 100)
+    await emit(run_id, "complete", 100)
 
     return {
         "run_id": run_id,
@@ -85,6 +82,5 @@ async def run_backtest(
             "end": str(portfolio.index.max().date()),
         },
         "computed_at": datetime.utcnow().isoformat(),
-        "in_sample_warning": "이 결과는 in-sample 데이터에 기반합니다.",
         **metrics,
     }
