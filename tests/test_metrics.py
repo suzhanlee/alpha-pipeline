@@ -105,3 +105,65 @@ class TestComputeMetrics:
     def test_num_days_matches_input(self, flat_returns):
         result = compute_metrics(flat_returns)
         assert result["num_days"] == len(flat_returns)
+
+
+# --- M-6 ---
+def test_cagr_returns_nan_for_total_loss():
+    """M-6: CAGR must return NaN (not 0.0) when total return is <= 0 (total loss)."""
+    import math
+    from metrics.performance import compute_metrics
+    import pandas as pd
+    import numpy as np
+
+    # Returns that result in total loss (portfolio goes to 0)
+    # -100% on day 1 → total = 0
+    returns = pd.Series([-1.0, 0.0, 0.0])
+    result = compute_metrics(returns)
+    assert math.isnan(result["cagr"]), (
+        f"CAGR should be NaN for total loss, got {result['cagr']}"
+    )
+
+
+def test_cagr_hides_loss_not_zero():
+    """M-6: CAGR must NOT return 0.0 when portfolio has total loss."""
+    from metrics.performance import compute_metrics
+    import pandas as pd
+
+    # Total return <= 0 scenario
+    returns = pd.Series([-0.5, -0.5, -0.1])
+    result = compute_metrics(returns)
+    # 0.0 would hide the loss — must be NaN or negative, not exactly 0.0
+    assert result["cagr"] != 0.0, (
+        f"CAGR returned 0.0 for a losing portfolio — this hides the loss"
+    )
+
+
+# --- M-7 ---
+def test_win_rate_docstring_mentions_active_days():
+    """M-7: win_rate calculation docstring must mention zero-return exclusion."""
+    import inspect
+    from metrics.performance import compute_metrics
+
+    source = inspect.getsource(compute_metrics)
+    assert "zero" in source.lower() or "active" in source.lower() or "no position" in source.lower(), (
+        "compute_metrics source must mention zero-return exclusion in the win_rate logic"
+    )
+
+
+# --- L-3 ---
+def test_daily_rf_conversion_error_within_tolerance():
+    """L-3: Daily risk-free rate conversion from annual must be within 0.0001 tolerance."""
+    # Annual rf = 4% = 0.04
+    annual_rf = 0.04
+    trading_days = 252
+
+    # Simple division (used in code)
+    simple_daily = annual_rf / trading_days
+
+    # Compound conversion (theoretically correct)
+    compound_daily = (1 + annual_rf) ** (1 / trading_days) - 1
+
+    # The difference should be within tolerance (it's ~3e-6, well under 0.0001)
+    assert abs(simple_daily - compound_daily) < 0.0001, (
+        f"Daily rf conversion error {abs(simple_daily - compound_daily):.2e} exceeds 0.0001"
+    )

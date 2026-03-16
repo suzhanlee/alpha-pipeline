@@ -42,7 +42,7 @@ def cagr(returns: pd.Series) -> float:
     total = float((1 + returns).prod())
     years = len(returns) / 252
     if years == 0 or total <= 0:
-        return 0.0
+        return float('nan')
     return float(total ** (1 / years) - 1)
 
 
@@ -55,10 +55,15 @@ def win_rate(returns: pd.Series) -> float:
 
 
 def compute_metrics(returns: pd.Series, risk_free_rate: float = 0.04) -> dict:
-    """Compute all standard performance metrics."""
+    """Compute all standard performance metrics.
+
+    win_rate: Zero-return days (no position) are excluded from the denominator.
+    Only active trading days (non-zero returns) are counted.
+    """
+    cagr_val = cagr(returns)
     return {
         "sharpe_ratio": round(sharpe_ratio(returns, risk_free_rate), 4),
-        "cagr": round(cagr(returns), 4),
+        "cagr": float('nan') if (isinstance(cagr_val, float) and cagr_val != cagr_val) else round(cagr_val, 4),
         "max_drawdown": round(max_drawdown(returns), 4),
         "win_rate": round(win_rate(returns), 4),
         "total_return": round(float((1 + returns).prod() - 1), 4),
