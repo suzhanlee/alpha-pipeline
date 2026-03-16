@@ -85,5 +85,6 @@ async def run_backtest(
             "end": str(portfolio.index.max().date()),
         },
         "computed_at": datetime.utcnow().isoformat(),
+        "in_sample_warning": "이 결과는 in-sample 데이터에 기반합니다.",
         **metrics,
     }
