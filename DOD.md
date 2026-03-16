@@ -15,7 +15,7 @@
 | - [ ] | H-5 | 캐시 무효화 없음 | 파일 mtime 변경 후 `get_cached` → `None` 반환 | `data/cache.py:12` | Testable |
 | - [ ] | H-6 | `/api/backtest` macd·rsi kwargs 누락 | macd/rsi 요청 시 `push_job` kwargs가 비어있지 않음 | `main.py:88-91` | Testable |
 | - [ ] | H-7 | `/api/compare` kwargs 전 전략 일괄 적용 | 각 전략이 자신의 파라미터 키만 수신 | `main.py:124-125` | Testable |
-| - [ ] | H-8 | Worker restart 정책 없음 | `docker-compose.yml` worker에 `restart: unless-stopped` 추가 | `docker-compose.yml:32` | No-Test |
+| - [x] | H-8 | Worker restart 정책 없음 | `docker-compose.yml` worker에 `restart: unless-stopped` 추가 | `docker-compose.yml:32` | No-Test |
 | - [ ] | H-9 | lookahead 임계값 느슨 | 순수 노이즈 데이터에서 `abs(sharpe) < 1.0` | `tests/test_signals.py:56-64` | Testable |
 
 ---
@@ -24,16 +24,16 @@
 
 | 완료 | ID | 설명 | 완료 조건 | 대상 파일 | 유형 |
 |------|----|------|-----------|-----------|------|
-| - [ ] | M-1 | Train/Test 분리 없음 | API 응답에 "in-sample 결과임" 명시 또는 `train_end_date` 파라미터 추가 | `runner/backtest.py` | No-Test |
-| - [ ] | M-2 | 다중검정 조정 없음 | `/api/compare` 응답에 `"multiple_testing_adjusted": false` 경고 필드 포함 | `main.py` | No-Test |
+| - [x] | M-1 | Train/Test 분리 없음 | API 응답에 "in-sample 결과임" 명시 또는 `train_end_date` 파라미터 추가 | `runner/backtest.py` | No-Test |
+| - [x] | M-2 | 다중검정 조정 없음 | `/api/compare` 응답에 `"multiple_testing_adjusted": false` 경고 필드 포함 | `main.py` | No-Test |
 | - [ ] | M-3 | SMA 거래비용 타이밍 불일치 | `turnover`가 `signal.shift(1).diff().abs()` 기준으로 계산됨 | `strategy/sma_cross.py:38-41` | Testable |
 | - [ ] | M-4 | Redis 결과 TTL 미설정 | `save_result` 호출 시 Redis `SET`에 `ex=` 인자 포함 | `storage/result_store.py:39` | Testable |
 | - [ ] | M-5 | SSE 상태 정리 미구현 | `emit(run_id, "complete", 100)` 후 `run_id not in _state` | `runner/progress.py` | Testable |
 | - [ ] | M-6 | CAGR 음수 총수익 은폐 | 손실 전략에서 `cagr()` → 음수 또는 `nan` 반환 (0.0 금지) | `metrics/performance.py:44` | Testable |
 | - [ ] | M-7 | Win Rate 0 수익일 미문서화 | `win_rate` docstring에 0 수익일 제외 정책 명시 + 동작 검증 | `metrics/performance.py:51` | Testable |
 | - [ ] | M-8 | 가격 ≤ 0 검증 없음 | `close <= 0` 행 포함 CSV 로드 시 `ValueError` 발생 | `data/loader.py:41-61` | Testable |
-| - [ ] | M-9 | Redis 메모리 제한 없음 | `docker-compose.yml` redis에 `mem_limit: 512m` 추가 | `docker-compose.yml:3-11` | No-Test |
-| - [ ] | M-10 | 인증/인가 없음 | 포트 바인딩 `127.0.0.1:8000:8000` 확인 또는 API Key 미들웨어 적용 | `main.py:67-125` | No-Test |
+| - [x] | M-9 | Redis 메모리 제한 없음 | `docker-compose.yml` redis에 `mem_limit: 512m` 추가 | `docker-compose.yml:3-11` | No-Test |
+| - [x] | M-10 | 인증/인가 없음 | 포트 바인딩 `127.0.0.1:8000:8000` 확인 또는 API Key 미들웨어 적용 | `main.py:67-125` | No-Test |
 
 ---
 
@@ -41,11 +41,11 @@
 
 | 완료 | ID | 설명 | 완료 조건 | 대상 파일 | 유형 |
 |------|----|------|-----------|-----------|------|
-| - [ ] | L-1 | 합성 데이터 사용 | `README.md` 또는 `REPORT.md`에 합성 데이터 경고 명시 | `README.md` / `REPORT.md` | No-Test |
+| - [x] | L-1 | 합성 데이터 사용 | `README.md` 또는 `REPORT.md`에 합성 데이터 경고 명시 | `README.md` / `REPORT.md` | No-Test |
 | - [ ] | L-2 | Worker 재처리 없음 | 예외 발생 시 job이 dead-letter 키에 기록됨 (`process_job` 리팩토링 필요) | `worker.py:33-51` | Testable |
 | - [ ] | L-3 | rf 일별 환산 단순 나눗셈 | 단순 나눗셈 vs 복리 환산 오차 `< 1bp/day (0.0001)` | `metrics/performance.py:23` | Testable |
-| - [ ] | L-4 | `.env.example` 불완전 | `config.py` 참조 변수 전부 포함 + 예시값/주석 | `.env.example` | No-Test |
-| - [ ] | L-5 | healthcheck 부재 | `docker-compose.yml` api/worker 서비스에 `healthcheck` 블록 추가 | `docker-compose.yml:13-35` | No-Test |
+| - [x] | L-4 | `.env.example` 불완전 | `config.py` 참조 변수 전부 포함 + 예시값/주석 | `.env.example` | No-Test |
+| - [x] | L-5 | healthcheck 부재 | `docker-compose.yml` api/worker 서비스에 `healthcheck` 블록 추가 | `docker-compose.yml:13-35` | No-Test |
 
 ---
 

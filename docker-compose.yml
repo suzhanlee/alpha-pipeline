@@ -5,6 +5,7 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    mem_limit: 512m
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -16,12 +17,17 @@ services:
       context: .
       dockerfile: Dockerfile.api
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       - redis
     environment:
       - PYTHONUNBUFFERED=1
       - REDIS_URL=redis://redis:6379
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   worker:
     build:
@@ -29,7 +35,12 @@ services:
       dockerfile: Dockerfile.worker
     depends_on:
       - redis
-    restart: "no"
+    restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
       - REDIS_URL=redis://redis:6379
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
