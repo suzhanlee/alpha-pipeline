@@ -21,6 +21,7 @@ services:
       - redis
     environment:
       - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://redis:6379
 
   worker:
     build:
@@ -31,3 +32,4 @@ services:
     restart: "no"
     environment:
       - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://redis:6379
