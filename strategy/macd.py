@@ -19,7 +19,7 @@ class Macd(BaseStrategy):
         self,
         fast: int = settings.MACD_FAST,
         slow: int = settings.MACD_SLOW,
-        signal: int = settings.MACD_SLOW,
+        signal: int = settings.MACD_SIGNAL,
     ) -> None:
         self.fast = fast
         self.slow = slow

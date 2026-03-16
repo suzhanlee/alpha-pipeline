@@ -42,26 +42,43 @@ class TestSmaCross:
         result = SmaCross().compute(df)
         assert set(result["signal"].unique()).issubset({0, 1})
 
-    def test_no_lookahead(self):
+    def test_no_lookahead_noise_sharpe(self):
+        """H-9: On pure noise data, any strategy Sharpe must be < 1.0.
+
+        A lookahead-biased strategy would produce unrealistically high Sharpe on noise.
+        Using n=1000 to reduce variance of the test itself.
         """
-        A strategy with look-ahead bias produces implausibly high Sharpe ratios.
+        rng = np.random.default_rng(42)
+        n = 1000
+        noise_returns = pd.Series(rng.standard_normal(n) * 0.01)
+        # Build a price series from noise returns
+        prices = (1 + noise_returns).cumprod()
+        prices.index = pd.date_range("2018-01-01", periods=n, freq="B")
 
-        This test checks that the Sharpe is in a 'reasonable' range — but the
-        threshold here is intentionally too loose, so look-ahead bias can still
-        pass this test.
+        df = pd.DataFrame({
+            "open": prices * 0.999,
+            "high": prices * 1.001,
+            "low": prices * 0.998,
+            "close": prices,
+            "volume": 1_000_000,
+            "daily_return": noise_returns,
+        })
 
-        If look-ahead bias is eliminated, this test continues to pass (Sharpe
-        drops but stays > 0). The test itself is not sufficient to catch the issue.
-        A correct test would compare strategies on a perfect-foresight dataset.
-        """
-        from metrics.performance import sharpe_ratio
+        from config import settings
+        strat = SmaCross(
+            short_window=settings.SMA_SHORT_WINDOW,
+            long_window=settings.SMA_LONG_WINDOW,
+        )
+        result = strat.compute(df)
+        strategy_returns = result["strategy_return"].dropna()
 
-        df = _make_ticker_df(n=600)
-        result = SmaCross().compute(df)
-        sharpe = sharpe_ratio(result["strategy_return"], risk_free_rate=0.0)
+        if len(strategy_returns) == 0 or strategy_returns.std() == 0:
+            pytest.skip("No strategy returns generated")
 
-        # This passes regardless of look-ahead bias — threshold is too weak
-        assert sharpe > -5.0, "Sharpe is extremely negative — strategy is broken"
+        sharpe = strategy_returns.mean() / strategy_returns.std() * np.sqrt(252)
+        assert abs(sharpe) < 1.0, (
+            f"Sharpe={sharpe:.3f} on pure noise exceeds 1.0 — possible lookahead bias"
+        )
 
     def test_signal_not_all_zero(self):
         """Strategy should produce at least some long positions."""

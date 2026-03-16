@@ -26,6 +26,8 @@ async def emit(run_id: str, step: str, pct: int, ticker: str = "") -> None:
     payload = {"run_id": run_id, "step": step, "pct": pct, "ticker": ticker}
     _cursor = f"data: {json.dumps(payload)}\n\n"
     await asyncio.sleep(0)  # yield to event loop
+    if step == "complete":
+        _state.pop(run_id, None)
 
 
 async def stream(run_id: str, poll_interval: float = 0.3) -> AsyncGenerator[str, None]:

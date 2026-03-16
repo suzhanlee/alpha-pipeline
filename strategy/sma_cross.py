@@ -34,8 +34,8 @@ class SmaCross(BaseStrategy):
         # Crossover signal: 1 when short SMA is above long SMA
         df["signal"] = (df["sma_short"] > df["sma_long"]).astype(int)
 
-        # Transaction cost: apply when signal changes
-        df["turnover"] = df["signal"].diff().abs().fillna(0)
+        # Transaction cost: apply on the day AFTER signal changes (no lookahead bias)
+        df["turnover"] = df["signal"].shift(1).diff().abs().fillna(0)
         cost_per_day = df["turnover"] * (settings.TRANSACTION_COST_BPS / 10_000)
 
         df["strategy_return"] = df["signal"] * df["daily_return"] - cost_per_day

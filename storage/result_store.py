@@ -36,7 +36,7 @@ async def save_result(run_id: str, result: dict[str, Any]) -> None:
         for k, v in result.items()
     }
 
-    await client.set(f"result:{run_id}", json.dumps(serialised))
+    await client.set(f"result:{run_id}", json.dumps(serialised), ex=86400)
     logger.debug("Saved result for %s", run_id)
 
 

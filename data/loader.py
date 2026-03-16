@@ -44,6 +44,11 @@ def load_price_data(path: str | Path) -> pd.DataFrame:
     if missing:
         raise ValueError(f"CSV is missing columns: {missing}")
 
+    if (df["close"] <= 0).any():
+        raise ValueError(
+            f"close prices must be positive; found {(df['close'] <= 0).sum()} non-positive values"
+        )
+
     df = df.sort_values(["ticker", "date"]).reset_index(drop=True)
 
     # Per-ticker daily return (close-to-close)
