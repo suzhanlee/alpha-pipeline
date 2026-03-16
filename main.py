@@ -122,4 +122,6 @@ async def compare(req: CompareRequest) -> dict:
         )
 
     kwargs = {"short_window": req.short_window, "long_window": req.long_window}
-    return await run_comparison(req.strategies, kwargs, "data/sample_data.csv")
+    result = await run_comparison(req.strategies, kwargs, "data/sample_data.csv")
+    result["multiple_testing_adjusted"] = False
+    return result
