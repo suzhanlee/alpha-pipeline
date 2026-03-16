@@ -1,5 +1,7 @@
 # REPORT — alpha-pipeline 감사 결과
 
+> ⚠️ **경고**: 이 파이프라인은 합성(synthetic) 데이터를 사용합니다. 실제 시장 데이터가 아닙니다. 백테스트 결과를 실제 투자 판단에 사용하지 마십시오.
+
 > 감사 일자: 2026-03-16
 > 감사 범위: bias / concurrency / data / metrics / production 5개 영역
 > 결론: **현재 상태에서 백테스트 결과를 신뢰할 수 없음**
